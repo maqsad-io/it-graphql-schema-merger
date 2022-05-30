@@ -9,6 +9,7 @@ const project = new typescript.TypeScriptProject({
   authorEmail: 'hassan@maqsad.io',
   authorUrl: 'maqsad.io',
   outdir: 'src/lib',
+  majorVersion: '1',
 
 
   // deps: [],                /* Runtime dependencies of this module. */
