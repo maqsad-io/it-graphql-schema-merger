@@ -2,10 +2,6 @@
 
 A helper tool to help you merge your graphql schema files without losing any directives.
 
-# GraphQL Schema Stitcher 🚀
-
-A helper tool to help you merge your graphql schema files without losing any directives.
-
 ## Documentation
 
 ### Examples
