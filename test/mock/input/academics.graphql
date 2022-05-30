@@ -1,0 +1,212 @@
+enum DoubtSolverStatus {
+  ONLINE
+  OFFLINE
+}
+
+type DoubtSolver
+  @model
+  @key(
+    name: "byStatus"
+    fields: ["status", "updatedAt"]
+    queryField: "listDoubtSolversByStatus"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  fname: String
+  lname: String
+  email: String
+  status: DoubtSolverStatus
+  isActive: Boolean
+  isDeleted: Boolean
+  updatedAt: AWSDateTime!
+}
+
+# Academics Service -----
+type BoardType
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+}
+
+type Board
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+  boardType: BoardType @connection
+  province: Province @connection
+  grades: [Grade] @connection(keyName: "byBoard", fields: ["id"])
+}
+
+type Province @model {
+  id: ID!
+  name: String
+}
+
+type GradeGroup
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+}
+
+type Grade
+  @model
+  @key(
+    name: "byBoard"
+    fields: ["boardID", "createdAt"]
+    queryField: "listGradesByBoard"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+  boardID: ID
+  board: Board @connection(fields: ["boardID"])
+  gradeGroup: GradeGroup @connection
+  subjects: [Subject] @connection(keyName: "byGrade", fields: ["id"])
+  createdAt: AWSDateTime
+}
+
+type Subject
+  @model
+  @key(
+    name: "byGrade"
+    fields: ["gradeID", "createdAt"]
+    queryField: "listSubjectsByGrades"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  image: String
+  topics: [Topic] @connection(keyName: "bySubject", fields: ["id"])
+  isActive: Boolean
+  isDeleted: Boolean
+  isNew: Boolean
+  comingSoon: Boolean
+  gradeID: ID
+  grade: Grade @connection(fields: ["gradeID"])
+  color: String
+  description: String
+  courseDurationSeconds: Int
+  courseInfoVideoUrl: String
+  topicCount: Int
+  createdAt: AWSDateTime
+  availability: Availability
+  position: Int
+}
+
+enum Availability {
+  RELEASED
+  COMING_SOON
+  DISCONTINUED
+}
+
+type Topic
+  @model
+  @key(
+    name: "bySubject"
+    fields: ["subjectID", "createdAt"]
+    queryField: "listTopicsBySubject"
+  )
+  @key(
+    name: "bySubjectWithPosition"
+    fields: ["subjectID", "position"]
+    queryField: "listTopicsBySubjectWithPostion"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  image: String
+  subjectID: ID
+  isDeleted: Boolean
+  isActive: Boolean
+  position: Int
+  numberOfLessons: Int
+  difficulty: Int
+  numberOfPracticeLessons: Int
+  topicDurationSeconds: Int
+  videoLessons: [VideoLesson] @connection(keyName: "byTopic", fields: ["id"])
+  videoLessonCount: Int
+  createdAt: AWSDateTime
+  subject: Subject @connection(fields: ["subjectID"])
+  comingSoon: Boolean
+}
+
+type MaterialType
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isDeleted: Boolean
+  isActive: Boolean
+}
+
+# interface Lesson {
+#   id: ID!
+#   name: String
+#   topicID: ID
+# }
+
+type VideoLesson
+  @model
+  @key(
+    name: "byTopic"
+    fields: ["topicID"]
+    queryField: "listVideoLessonsByTopic"
+  )
+  @key(
+    name: "byTopicWithPosition"
+    fields: ["topicID", "position"]
+    queryField: "listVideoLessonsByTopicWithPosition"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  position: Int
+  topicID: ID
+  topic: Topic @connection(fields: ["topicID"])
+  subject: Subject @connection
+  materialType: MaterialType @connection
+  thumbnail: String
+  duration: Float
+  videoID: String
+  isDeleted: Boolean
+  isActive: Boolean
+}
+
+type RecommendedVideoLesson
+  @model
+  @key(
+    name: "byActiveStatus"
+    fields: ["isActive", "position"]
+    queryField: "listActiveRecommendedVideoLessons"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  link: String
+  videoLesson: VideoLesson @connection
+  isDeleted: Boolean
+  isActive: ActiveStatus
+  position: Int
+}
+
+enum ActiveStatus {
+  ACTIVE
+  INACTIVE
+}
+
+type Query{
+    listVideosByIDs(ids: [String]): [VideoLesson]
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+}

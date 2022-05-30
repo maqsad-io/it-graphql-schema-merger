@@ -1,0 +1,598 @@
+#Assessments Schema
+type AssessmentQuestion @model {
+  id: ID!
+  question: String
+  questionLatex: String
+  topicID: ID
+  subjectID: ID
+  gradeID: ID
+  options: [QuestionOption]
+    @connection(keyName: "byAssessmentQuestion", fields: ["id"])
+  correctOptionID: ID
+  difficultyID: ID
+  difficulty: Difficulty @connection(fields: ["difficultyID"])
+  learningOutcomes: String
+  questionType: QuestionType
+  isOnlyExplanationQuestion: Boolean
+}
+
+enum QuestionType {
+  SHORT
+  LONG
+  MCQ
+}
+
+enum AssessmentType {
+  TOPIC
+  SUBJECT
+}
+
+type AssessmentSubject
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  image: String
+  fullAssessmentID: ID
+  color: String
+  position: Int
+  isActive: Boolean
+  gradeID: ID
+  gradeName: String
+  questionCount: Int
+  isComingSoon: Boolean
+}
+
+type AssessmentTopic
+  @model
+  @key(
+    name: "bySubject"
+    fields: ["assessmentSubjectID"]
+    queryField: "listAssessmentTopicsBySubject"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  assessmentSubjectID: ID
+  name: String
+  isActive: Boolean
+  position: Int
+  questionCount: Int
+}
+
+type AssessmentTopicDifficulty
+  @model
+  @key(
+    name: "ByTopic"
+    fields: ["assessmentTopicID"]
+    queryField: "listAssessmentTopicDifficultiesByTopic"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  assessmentTopicID: ID
+  assessmentTopic: AssessmentTopic @connection(fields: ["assessmentTopicID"])
+  difficultyID: ID
+  difficulty: Difficulty @connection(fields: ["difficultyID"])
+  assessmentID: ID
+  subjectID: String
+  # assessment: Assessment @connection(fields: ["assessmentID"])
+}
+
+type Assessment
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  assessmentTopicDifficultyID: ID
+  assessmentTopicDifficulty: AssessmentTopicDifficulty
+    @connection(fields: ["assessmentTopicDifficultyID"])
+  assessmentSubjectID: ID
+  assessmentSubject: AssessmentSubject
+    @connection(fields: ["assessmentSubjectID"])
+  assessmentType: AssessmentType
+  questions: [AssessmentQuestionsRelation]
+    @connection(keyName: "byAssessment", fields: ["id"])
+  questionsCount: Int
+}
+
+type AssessmentQuestionsRelation
+  @model(queries: null)
+  @key(name: "byAssessment", fields: ["assessmentID", "assessmentQuestionID"])
+  @key(
+    name: "byAssessmentQuestion"
+    fields: ["assessmentQuestionID", "assessmentID"]
+  ) {
+  id: ID!
+  assessmentQuestionID: ID
+  assessmentID: ID
+  assessmentQuestion: AssessmentQuestion
+    @connection(fields: ["assessmentQuestionID"])
+  assessment: Assessment @connection(fields: ["assessmentID"])
+}
+
+type Difficulty
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  position: Int
+  score: Int
+}
+
+# type LearningOutcome
+# @model
+# @key(name: "byAssessmentQuestion", fields: ["assessmentQuestionID", "position"])
+# {
+# id: ID!
+# position:Int
+# outcome:String
+# assessmentQuestionID:ID
+# }
+
+type QuestionOption
+  @model
+  @key(
+    name: "byAssessmentQuestion"
+    fields: ["assessmentQuestionID", "position"]
+  ) {
+  id: ID!
+  position: Int
+  option: String
+  assessmentQuestionID: ID
+}
+
+enum UserAssessmentType {
+  PRACTICE
+  EXAM
+}
+
+type UserAssessment
+  @model
+  @key(
+    name: "byUser"
+    fields: ["userID"]
+    queryField: "listUserAssessmentByUserID"
+  ) {
+  id: ID!
+  userID: ID
+  assessmentID: ID
+  attemptID: String!
+  subject: AssessmentSubject @connection
+  topic: AssessmentTopic @connection
+  assessment: Assessment @connection(fields: ["assessmentID"])
+  userAssessmentType: UserAssessmentType #can be practice or exam
+  userAnswers: [UserAssessmentAnswer]
+    @connection(keyName: "byUserAssessment", fields: ["id"])
+  latestAnswers: [UserAssessmentAnswer]
+    @connection(keyName: "byAttemptID", fields: ["attemptID"])
+
+  isCompleted: Boolean
+  lastQuestionAttemptedID: ID
+  score: Int
+  totalQuestions: Int
+  skippedQuestions: Int
+  progress: Int
+}
+
+enum AnswerType {
+  CORRECT
+  INCORRECT
+  SKIPPED
+  SECOND_ATTEMPT
+}
+
+type UserAssessmentAnswer
+  @key(name: "byUserAssessment", fields: ["userAssessmentID"])
+  @key(
+    name: "byUserID"
+    fields: ["userID", "createdAt"]
+    queryField: "listUserAssessmentAnswersByUserID"
+  )
+  @key(
+    name: "byAttemptID"
+    fields: ["attemptID", "isFinal"]
+    queryField: "listAssessmentAnswersByAttemptID"
+  )
+  @model {
+  id: ID!
+  userAssessmentID: ID
+  questionID: ID
+  optionSelectedID: ID
+  answerType: AnswerType
+  subjectID: String
+  topicID: String
+  userID: String!
+  position: Int
+  questionPosition: Int
+  attemptID: String
+  isFinal: String!
+  createdAt: AWSDateTime!
+}
+
+enum UserAssessmentProgressType {
+  SUBJECT
+  TOPIC
+}
+
+type UserProgress
+  @key(
+    name: "byUser"
+    fields: ["userID"]
+    queryField: "listUserAssessmentProgressByUserID"
+  )
+  @key(
+    name: "byUserAndProgressType"
+    fields: ["userID", "progressType"]
+    queryField: "listUserAssessmentProgressByUserIDAndType"
+  )
+  @model {
+  id: ID!
+  userID: ID
+  progressTypeID: String
+  progressType: UserAssessmentProgressType!
+  progress: Int
+}
+
+type AssessmentSubjectList {
+  id: String!
+  fullAssessmentID: String
+  subjectID: String
+  isActive: Boolean
+  name: String
+  image: String
+  color: String
+  grade: String
+  position: Int
+}
+
+type AssessmentTopicList {
+  id: String!
+  subjectID: String
+  topicID: String
+  isActive: Boolean
+  name: String
+  position: Int
+}
+
+type AssessmentPaper {
+  questions: [AssessmentPaperQuestion]
+  userAssessmentID: String
+  isCompleted: Boolean
+  lastQuestionAttemptedID: String
+  userAnswers: [UserAssessmentAnswer]
+}
+
+type AssessmentPaperQuestion {
+  html: String
+  questionID: String
+  correctOptionID: String
+  videoID: String
+  videoDuration: Float
+  videoURL: String
+}
+
+type AssessmentScore {
+  userAssessmentID: String
+  difficulty: String
+  score: Int
+  totalQuestions: Int
+}
+
+type UserAssessmentScoresList {
+  grade: String
+  subject: String
+  subjectColor: String
+  subjectImage: String
+  topic: String
+  scores: [AssessmentScore]
+}
+
+type UserAssessmentProgressList {
+  subject: Int
+  topic: Int
+  difficulty: Int
+}
+
+type TopicDifficultiesWithUserAssessmentList {
+  id: String
+  difficultyID: String
+  difficulty: Difficulty
+  assessmentID: String
+  userAssessmentID: String
+  isCompleted: Boolean
+  lastQuestionAttemptedID: String
+  score: Int
+  progress: Int
+  topicDifficultyQuestionCount: Int
+}
+
+enum AssessmentAnswerState {
+  FINAL
+  ATTEMPT
+}
+
+input InsertAssessmentAnswerSingle {
+  id: ID
+  userAssessmentID: ID
+  questionID: ID
+  optionSelectedID: ID
+  answerType: String
+  subjectID: String
+  topicID: String
+  attemptID: String
+  position: Int
+  userID: String!
+  questionPosition: Int
+  isFinal: AssessmentAnswerState!
+  createdAt: AWSDateTime
+}
+
+input BatchInsertAssessmentAnswers {
+  items: [InsertAssessmentAnswerSingle]
+}
+
+
+enum DoubtSolverStatus {
+  ONLINE
+  OFFLINE
+}
+
+type DoubtSolver
+  @model
+  @key(
+    name: "byStatus"
+    fields: ["status", "updatedAt"]
+    queryField: "listDoubtSolversByStatus"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  fname: String
+  lname: String
+  email: String
+  status: DoubtSolverStatus
+  isActive: Boolean
+  isDeleted: Boolean
+  updatedAt: AWSDateTime!
+}
+
+# Academics Service -----
+type BoardType
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+}
+
+type Board
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+  boardType: BoardType @connection
+  province: Province @connection
+  grades: [Grade] @connection(keyName: "byBoard", fields: ["id"])
+}
+
+type Province @model {
+  id: ID!
+  name: String
+}
+
+type GradeGroup
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+}
+
+type Grade
+  @model
+  @key(
+    name: "byBoard"
+    fields: ["boardID", "createdAt"]
+    queryField: "listGradesByBoard"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isActive: Boolean
+  isDeleted: Boolean
+  boardID: ID
+  board: Board @connection(fields: ["boardID"])
+  gradeGroup: GradeGroup @connection
+  subjects: [Subject] @connection(keyName: "byGrade", fields: ["id"])
+  createdAt: AWSDateTime
+}
+
+type Subject
+  @model
+  @key(
+    name: "byGrade"
+    fields: ["gradeID", "createdAt"]
+    queryField: "listSubjectsByGrades"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  image: String
+  topics: [Topic] @connection(keyName: "bySubject", fields: ["id"])
+  isActive: Boolean
+  isDeleted: Boolean
+  isNew: Boolean
+  comingSoon: Boolean
+  gradeID: ID
+  grade: Grade @connection(fields: ["gradeID"])
+  color: String
+  description: String
+  courseDurationSeconds: Int
+  courseInfoVideoUrl: String
+  topicCount: Int
+  createdAt: AWSDateTime
+  availability: Availability
+  position: Int
+}
+
+enum Availability {
+  RELEASED
+  COMING_SOON
+  DISCONTINUED
+}
+
+type Topic
+  @model
+  @key(
+    name: "bySubject"
+    fields: ["subjectID", "createdAt"]
+    queryField: "listTopicsBySubject"
+  )
+  @key(
+    name: "bySubjectWithPosition"
+    fields: ["subjectID", "position"]
+    queryField: "listTopicsBySubjectWithPostion"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  image: String
+  subjectID: ID
+  isDeleted: Boolean
+  isActive: Boolean
+  position: Int
+  numberOfLessons: Int
+  difficulty: Int
+  numberOfPracticeLessons: Int
+  topicDurationSeconds: Int
+  videoLessons: [VideoLesson] @connection(keyName: "byTopic", fields: ["id"])
+  videoLessonCount: Int
+  createdAt: AWSDateTime
+  subject: Subject @connection(fields: ["subjectID"])
+  comingSoon: Boolean
+}
+
+type MaterialType
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  isDeleted: Boolean
+  isActive: Boolean
+}
+
+# interface Lesson {
+#   id: ID!
+#   name: String
+#   topicID: ID
+# }
+
+type VideoLesson
+  @model
+  @key(
+    name: "byTopic"
+    fields: ["topicID"]
+    queryField: "listVideoLessonsByTopic"
+  )
+  @key(
+    name: "byTopicWithPosition"
+    fields: ["topicID", "position"]
+    queryField: "listVideoLessonsByTopicWithPosition"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  name: String
+  position: Int
+  topicID: ID
+  topic: Topic @connection(fields: ["topicID"])
+  subject: Subject @connection
+  materialType: MaterialType @connection
+  thumbnail: String
+  duration: Float
+  videoID: String
+  isDeleted: Boolean
+  isActive: Boolean
+}
+
+type RecommendedVideoLesson
+  @model
+  @key(
+    name: "byActiveStatus"
+    fields: ["isActive", "position"]
+    queryField: "listActiveRecommendedVideoLessons"
+  )
+  @auth(rules: [{ allow: owner, ownerField: "id" }, { allow: public }]) {
+  id: ID!
+  link: String
+  videoLesson: VideoLesson @connection
+  isDeleted: Boolean
+  isActive: ActiveStatus
+  position: Int
+}
+
+enum ActiveStatus {
+  ACTIVE
+  INACTIVE
+}
+
+type Query {
+  fetchAssessmentSubjectsList: [AssessmentSubjectList]
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+
+  fetchAssessmentTopicsList: [AssessmentTopicList]
+    @http(
+      url: "https://admin-middleware-dev.maqsad.net/admin-middleware/assessments/topics/:subjectID"
+    )
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+
+  fetchAssessmentPaper: AssessmentPaper
+    @http(
+      url: "https://admin-middleware-dev.maqsad.net/admin-middleware/generate/practice?id=:id&userID=:userID"
+    )
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+
+  fetchUserPreviousAssessmentScores: [UserAssessmentScoresList]
+    @http(
+      url: "http://maqsad-app-1224911045.ap-southeast-1.elb.amazonaws.com/assessments/user-test-scores/:userID"
+    )
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+
+  fetchUpdateUserProgress: UserAssessmentProgressList
+    @http(
+      url: "http://maqsad-app-1224911045.ap-southeast-1.elb.amazonaws.com/assessments/user/progress?assessmentID=:userAssessmentID&userID=:userID"
+    )
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+  fetchAssessmentTopicDifficultiesWithUserAssessment: [TopicDifficultiesWithUserAssessmentList]
+    @http(
+      url: "http://maqsad-app-1224911045.ap-southeast-1.elb.amazonaws.com/assessments/assessmentTopicDifficulty/:assessmentTopicID/:userID"
+    )
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+
+    listVideosByIDs(ids: [String]): [VideoLesson]
+    @aws_api_key
+    @aws_iam
+    @aws_cognito_user_pools
+}
+
+type Mutation {
+  updateAssessmentAnswers(
+    input: BatchInsertAssessmentAnswers!
+  ): [UserAssessmentAnswer] @aws_api_key @aws_iam @aws_cognito_user_pools
+}
+
+
+type Subscription {
+}
