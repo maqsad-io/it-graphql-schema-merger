@@ -75,12 +75,7 @@
     },
     "compile": {
       "name": "compile",
-      "description": "Only compile",
-      "steps": [
-        {
-          "exec": "tsc --build"
-        }
-      ]
+      "description": "Only compile"
     },
     "default": {
       "name": "default",
@@ -100,15 +95,6 @@
       "steps": [
         {
           "spawn": "default"
-        }
-      ]
-    },
-    "eslint": {
-      "name": "eslint",
-      "description": "Runs eslint against the codebase",
-      "steps": [
-        {
-          "exec": "eslint --ext .ts,.tsx --fix --no-error-on-unmatched-pattern src test build-tools .projenrc.js"
         }
       ]
     },
@@ -166,9 +152,6 @@
       "steps": [
         {
           "exec": "jest --passWithNoTests --all --updateSnapshot"
-        },
-        {
-          "spawn": "eslint"
         }
       ]
     },
@@ -242,15 +225,6 @@
         },
         {
           "spawn": "post-upgrade"
-        }
-      ]
-    },
-    "watch": {
-      "name": "watch",
-      "description": "Watch & compile in the background",
-      "steps": [
-        {
-          "exec": "tsc --build -w"
         }
       ]
     }

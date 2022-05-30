@@ -6,6 +6,11 @@ import { GraphQLSchemaStitcher } from '../src/index';
 const helper = new GraphQLSchemaStitcher({
   inputDir: __dirname + '/mock/input',
 });
+
+const removeSpace = (data: string): string => {
+  return data.replace(/\s/g, '');
+};
+
 test('Functions Defined', () => {
   expect(helper.mergeSchemaContents).toBeDefined();
   expect(helper.fixDirectives).toBeDefined();
@@ -47,9 +52,6 @@ test('E2E Test', () => {
   expect(sample).toBe(output);
 });
 
-function removeSpace(input: string): string {
-  return input.replace(/\s/g, '');
-}
 
 //
 // function findDifferenceBetweenFiles(fileA: string, fileB: string): boolean {
